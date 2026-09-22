@@ -1,30 +1,17 @@
 const mongoose = require('mongoose');
 
-const EXPENSE_CATEGORIES = [
-  'Food',
-  'Transport',
-  'Shopping',
-  'Bills',
-  'Education',
-  'Entertainment',
-  'Health',
-  'Travel',
-  'Other',
-];
-
-const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Business', 'Gift', 'Other'];
-
-const transactionSchema = new mongoose.Schema(
+const recurringTransactionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
     },
     type: {
       type: String,
       enum: ['income', 'expense'],
-      required: [true, 'Transaction type is required'],
+      required: [true, 'Type is required'],
     },
     amount: {
       type: Number,
@@ -42,14 +29,22 @@ const transactionSchema = new mongoose.Schema(
       trim: true,
       maxlength: [200, 'Description cannot exceed 200 characters'],
     },
-    date: {
+    frequency: {
+      type: String,
+      enum: ['Weekly', 'Monthly', 'Yearly'],
+      required: [true, 'Frequency is required'],
+      default: 'Monthly',
+    },
+    nextDate: {
       type: Date,
-      required: [true, 'Date is required'],
+      required: [true, 'Next occurrence date is required'],
+    },
+    active: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Transaction', transactionSchema);
-module.exports.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
-module.exports.INCOME_CATEGORIES = INCOME_CATEGORIES;
+module.exports = mongoose.model('RecurringTransaction', recurringTransactionSchema);

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { MdErrorOutline } from 'react-icons/md';
+import { getCategories } from '../services/categoryService';
+import { useCurrency } from '../context/CurrencyContext';
 
-const EXPENSE_CATEGORIES = [
+const DEFAULT_EXPENSE_CATEGORIES = [
   'Food',
   'Transport',
   'Shopping',
@@ -9,14 +11,21 @@ const EXPENSE_CATEGORIES = [
   'Education',
   'Entertainment',
   'Health',
+  'Travel',
   'Other',
 ];
 
-const INCOME_CATEGORIES = ['Salary', 'Freelance', 'Business', 'Gift', 'Other'];
+const DEFAULT_INCOME_CATEGORIES = ['Salary', 'Freelance', 'Business', 'Gift', 'Other'];
 
 const today = new Date().toISOString().split('T')[0];
 
 function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
+  const { symbol } = useCurrency();
+  const [categoriesMap, setCategoriesMap] = useState({
+    expense: DEFAULT_EXPENSE_CATEGORIES,
+    income: DEFAULT_INCOME_CATEGORIES,
+  });
+
   const [formData, setFormData] = useState({
     type: 'expense',
     amount: '',
@@ -25,6 +34,23 @@ function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
     date: today,
   });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const { data } = await getCategories();
+        if (data.expenseCategories && data.incomeCategories) {
+          setCategoriesMap({
+            expense: data.expenseCategories,
+            income: data.incomeCategories,
+          });
+        }
+      } catch (e) {
+        // Fallback already in initial state
+      }
+    };
+    fetchCats();
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -40,8 +66,7 @@ function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
     }
   }, [initialData]);
 
-  const categories =
-    formData.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const categories = categoriesMap[formData.type] || [];
 
   const handleTypeChange = (type) => {
     setFormData((prev) => ({ ...prev, type, category: '' }));
@@ -115,7 +140,7 @@ function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
       {/* Amount */}
       <div className="form-group">
         <label htmlFor="amount" className="form-label">
-          Amount <span>*</span>
+          Amount ({symbol}) <span>*</span>
         </label>
         <input
           id="amount"
@@ -123,7 +148,7 @@ function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
           type="number"
           min="0.01"
           step="0.01"
-          placeholder="0.00"
+          placeholder={`${symbol}0.00`}
           className={`form-control${errors.amount ? ' error' : ''}`}
           value={formData.amount}
           onChange={handleChange}
@@ -195,7 +220,6 @@ function TransactionForm({ onSubmit, loading, initialData, submitLabel }) {
           className={`form-control${errors.date ? ' error' : ''}`}
           value={formData.date}
           onChange={handleChange}
-          max={today}
         />
         {errors.date && (
           <div className="form-error">

@@ -15,7 +15,8 @@ function Transactions() {
     setError('');
     try {
       const { data } = await getTransactions();
-      setTransactions(data);
+      const list = Array.isArray(data) ? data : (data.transactions || []);
+      setTransactions(list);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load transactions');
     } finally {
@@ -36,7 +37,7 @@ function Transactions() {
           <div>
             <h1 className="page-title">Transactions</h1>
             <p className="page-subtitle">
-              {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} total
+              {transactions.length} record{transactions.length !== 1 ? 's' : ''} in your ledger
             </p>
           </div>
           <Link to="/add-transaction" className="btn btn-primary" id="add-transaction-link">

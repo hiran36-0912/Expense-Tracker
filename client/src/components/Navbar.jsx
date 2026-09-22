@@ -3,18 +3,28 @@ import { useState } from 'react';
 import {
   MdDashboard,
   MdSwapHoriz,
-  MdAnalytics,
   MdAddCircleOutline,
+  MdPieChart,
+  MdSavings,
+  MdAutorenew,
+  MdAssessment,
+  MdCategory,
   MdPerson,
   MdLogout,
   MdMenu,
   MdClose,
   MdWallet,
+  MdDarkMode,
+  MdLightMode,
 } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 function Navbar() {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -28,33 +38,79 @@ function Navbar() {
   const navLinks = [
     { to: '/dashboard', icon: <MdDashboard />, label: 'Dashboard' },
     { to: '/transactions', icon: <MdSwapHoriz />, label: 'Transactions' },
-    { to: '/analytics', icon: <MdAnalytics />, label: 'Analytics' },
     { to: '/add-transaction', icon: <MdAddCircleOutline />, label: 'Add Transaction' },
+    { to: '/budgets', icon: <MdPieChart />, label: 'Budgets' },
+    { to: '/goals', icon: <MdSavings />, label: 'Savings Goals' },
+    { to: '/recurring', icon: <MdAutorenew />, label: 'Recurring' },
+    { to: '/reports', icon: <MdAssessment />, label: 'Reports' },
+    { to: '/categories', icon: <MdCategory />, label: 'Categories' },
     { to: '/profile', icon: <MdPerson />, label: 'Profile' },
   ];
 
-  const SidebarContent = () => (
-    <div className="sidebar">
+  const NavContent = () => (
+    <>
       <div className="sidebar-brand">
         <Link to="/dashboard" className="sidebar-logo" onClick={closeSidebar}>
           <div className="sidebar-logo-icon">
             <MdWallet />
           </div>
           <span className="sidebar-logo-text">
-            Expense<span>Track</span>
+            Expense<span>Track Pro</span>
           </span>
         </Link>
+        <button
+          className="sidebar-close-btn"
+          onClick={closeSidebar}
+          aria-label="Close menu"
+        >
+          <MdClose />
+        </button>
       </div>
 
       <div className="sidebar-user">
-        <div className="sidebar-user-name">
-          {user?.name || 'User'}
+        <div className="sidebar-user-avatar">
+          {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
         </div>
-        <div className="sidebar-user-label">Personal Account</div>
+        <div className="sidebar-user-info">
+          <div className="sidebar-user-name">{user?.name || 'User'}</div>
+          <div className="sidebar-user-label">{user?.email || 'Personal Account'}</div>
+        </div>
+      </div>
+
+      {/* Quick Settings: Theme & Currency */}
+      <div className="sidebar-quick-settings">
+        <div className="quick-setting-item">
+          <span className="setting-label">Theme</span>
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            id="theme-toggle-btn"
+            title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+          >
+            {isDark ? <MdLightMode /> : <MdDarkMode />}
+            <span>{isDark ? 'Light' : 'Dark'}</span>
+          </button>
+        </div>
+
+        <div className="quick-setting-item">
+          <span className="setting-label">Currency</span>
+          <select
+            className="currency-select"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            id="currency-select"
+          >
+            {currencies.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <nav className="sidebar-nav">
-        <div className="sidebar-nav-section-label">Menu</div>
+        <div className="sidebar-nav-section-label">Main Menu</div>
         {navLinks.map((link) => (
           <NavLink
             key={link.to}
@@ -63,7 +119,7 @@ function Navbar() {
             onClick={closeSidebar}
           >
             {link.icon}
-            {link.label}
+            <span>{link.label}</span>
           </NavLink>
         ))}
       </nav>
@@ -71,54 +127,18 @@ function Navbar() {
       <div className="sidebar-footer">
         <button className="logout-btn" onClick={handleLogout} id="logout-btn">
           <MdLogout />
-          Logout
+          <span>Logout</span>
         </button>
       </div>
-    </div>
+    </>
   );
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className={`sidebar${sidebarOpen ? ' open' : ''}`}>
-        <div className="sidebar-brand">
-          <Link to="/dashboard" className="sidebar-logo" onClick={closeSidebar}>
-            <div className="sidebar-logo-icon">
-              <MdWallet />
-            </div>
-            <span className="sidebar-logo-text">
-              Expense<span>Track</span>
-            </span>
-          </Link>
-        </div>
-
-        <div className="sidebar-user">
-          <div className="sidebar-user-name">{user?.name || 'User'}</div>
-          <div className="sidebar-user-label">Personal Account</div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <div className="sidebar-nav-section-label">Menu</div>
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-              onClick={closeSidebar}
-            >
-              {link.icon}
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout} id="logout-btn">
-            <MdLogout />
-            Logout
-          </button>
-        </div>
-      </div>
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
+        <NavContent />
+      </aside>
 
       {/* Mobile Top Bar */}
       <div className="top-bar">
@@ -135,10 +155,16 @@ function Navbar() {
             <MdWallet />
           </div>
           <span className="sidebar-logo-text" style={{ fontSize: 16 }}>
-            Expense<span>Track</span>
+            Expense<span>Track Pro</span>
           </span>
         </Link>
-        <div style={{ width: 32 }} />
+        <button
+          className="theme-toggle-btn mobile-toggle"
+          onClick={toggleTheme}
+          aria-label="Toggle Theme"
+        >
+          {isDark ? <MdLightMode /> : <MdDarkMode />}
+        </button>
       </div>
 
       {/* Mobile Overlay */}

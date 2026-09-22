@@ -1,26 +1,25 @@
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import EmptyState from './EmptyState';
-import { MdBarChart } from 'react-icons/md';
+import { MdTrendingDown } from 'react-icons/md';
 import { useCurrency } from '../context/CurrencyContext';
 
-function MonthlyBarChart({ data }) {
+function SpendingTrendChart({ data }) {
   const { formatCurrency, symbol } = useCurrency();
 
   if (!data || data.length === 0) {
     return (
       <EmptyState
-        icon={<MdBarChart />}
-        title="No monthly data"
-        message="Add transactions to see the monthly income vs expenses chart."
+        icon={<MdTrendingDown />}
+        title="No trend data"
+        message="Record expenses to visualize spending trends over time."
       />
     );
   }
@@ -30,7 +29,7 @@ function MonthlyBarChart({ data }) {
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return {
       ...d,
-      label: date.toLocaleString('default', { month: 'short', year: '2-digit' }),
+      label: date.toLocaleString('default', { month: 'short' }),
     };
   });
 
@@ -39,11 +38,9 @@ function MonthlyBarChart({ data }) {
       return (
         <div className="chart-tooltip">
           <p className="chart-tooltip-title">{label}</p>
-          {payload.map((entry) => (
-            <p key={entry.name} style={{ color: entry.fill, marginBottom: 2, fontSize: 13 }}>
-              {entry.name === 'income' ? 'Income' : 'Expenses'}: {formatCurrency(entry.value)}
-            </p>
-          ))}
+          <p className="chart-tooltip-value" style={{ color: '#e11d48' }}>
+            Expense: {formatCurrency(payload[0].value)}
+          </p>
         </div>
       );
     }
@@ -52,12 +49,17 @@ function MonthlyBarChart({ data }) {
 
   return (
     <div className="chart-container">
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart
+      <ResponsiveContainer width="100%" height={240}>
+        <AreaChart
           data={formattedData}
           margin={{ top: 10, right: 10, left: -10, bottom: 4 }}
-          barCategoryGap="25%"
         >
+          <defs>
+            <linearGradient id="expenseTrendGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#e11d48" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#e11d48" stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" vertical={false} />
           <XAxis
             dataKey="label"
@@ -72,19 +74,18 @@ function MonthlyBarChart({ data }) {
             tickFormatter={(v) => `${symbol}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend
-            formatter={(value) => (
-              <span style={{ fontSize: 12, color: 'var(--gray-600)', fontWeight: 500 }}>
-                {value === 'income' ? 'Income' : 'Expenses'}
-              </span>
-            )}
+          <Area
+            type="monotone"
+            dataKey="expenses"
+            stroke="#e11d48"
+            strokeWidth={2.5}
+            fillOpacity={1}
+            fill="url(#expenseTrendGradient)"
           />
-          <Bar dataKey="income" fill="#10b981" radius={[6, 6, 0, 0]} />
-          <Bar dataKey="expenses" fill="#f43f5e" radius={[6, 6, 0, 0]} />
-        </BarChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-export default MonthlyBarChart;
+export default SpendingTrendChart;

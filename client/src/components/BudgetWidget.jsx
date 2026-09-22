@@ -3,8 +3,11 @@ import { MdTrackChanges, MdEdit, MdCheck, MdClose, MdWarningAmber } from 'react-
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/userService';
 
+import { useCurrency } from '../context/CurrencyContext';
+
 function BudgetWidget({ currentMonthExpenses = 0, onBudgetUpdated }) {
   const { user, updateUser } = useAuth();
+  const { formatCurrency } = useCurrency();
   const [editing, setEditing] = useState(false);
   const [budgetInput, setBudgetInput] = useState(user?.budget || '');
   const [saving, setSaving] = useState(false);
@@ -16,13 +19,6 @@ function BudgetWidget({ currentMonthExpenses = 0, onBudgetUpdated }) {
   const rawPercent = budget > 0 ? ((spent / budget) * 100).toFixed(1) : 0;
   const remaining = budget > 0 ? budget - spent : 0;
   const isOverBudget = budget > 0 && spent > budget;
-
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
 
   const handleSaveBudget = async (e) => {
     e.preventDefault();

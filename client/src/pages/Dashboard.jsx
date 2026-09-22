@@ -4,21 +4,30 @@ import {
   MdAccountBalanceWallet,
   MdTrendingUp,
   MdTrendingDown,
+  MdSavings,
   MdAddCircleOutline,
+  MdArrowUpward,
+  MdArrowDownward,
+  MdWarning,
+  MdPieChart,
+  MdCheckCircle,
+  MdEventNote,
 } from 'react-icons/md';
 import { TbReceipt } from 'react-icons/tb';
-import BudgetWidget from '../components/BudgetWidget';
 import SummaryCard from '../components/SummaryCard';
 import CategoryPieChart from '../components/CategoryPieChart';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import SpendingTrendChart from '../components/SpendingTrendChart';
 import Spinner from '../components/Spinner';
 import EmptyState from '../components/EmptyState';
 import { getDashboardSummary } from '../services/dashboardService';
+import { useCurrency } from '../context/CurrencyContext';
 
 function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { formatCurrency } = useCurrency();
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -37,15 +46,8 @@ function Dashboard() {
     fetchSummary();
   }, []);
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 2,
-    }).format(value || 0);
-
   const formatDate = (date) =>
-    new Date(date).toLocaleDateString('en-IN', {
+    new Date(date).toLocaleDateString('default', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -64,58 +66,274 @@ function Dashboard() {
     );
   }
 
+  const comparison = summary?.monthlyComparison;
+  const budgetOverview = summary?.budgetOverview;
+  const goalsOverview = summary?.goalsOverview;
+  const upcomingRecurring = summary?.upcomingRecurring || [];
+
   return (
     <div className="page-container">
       <div className="page-header">
         <div className="flex-between">
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Your financial overview at a glance</p>
+            <h1 className="page-title">Financial Dashboard</h1>
+            <p className="page-subtitle">Track, budget, and analyze your wealth in real-time</p>
           </div>
-          <Link to="/add-transaction" className="btn btn-primary" id="add-transaction-link">
-            <MdAddCircleOutline />
-            Add Transaction
-          </Link>
+          <div className="header-actions">
+            <Link to="/add-transaction" className="btn btn-primary" id="add-transaction-link">
+              <MdAddCircleOutline />
+              Add Transaction
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="summary-cards">
+      {/* Warning / In-App Notification Alerts */}
+      {budgetOverview?.exceededBudgetsCount > 0 && (
+        <div className="alert alert-warning" style={{ marginBottom: 20 }}>
+          <MdWarning style={{ fontSize: 20, flexShrink: 0 }} />
+          <div>
+            <strong>Budget Exceeded Alert:</strong> You have exceeded spending limits on{' '}
+            {budgetOverview.exceededBudgetsCount} category budget(s) this month.{' '}
+            <Link to="/budgets" style={{ textDecoration: 'underline', fontWeight: 600 }}>
+              Review Budgets
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {upcomingRecurring.length > 0 && (
+        <div className="alert alert-info" style={{ marginBottom: 20 }}>
+          <MdEventNote style={{ fontSize: 20, flexShrink: 0 }} />
+          <div>
+            <strong>Upcoming Recurring Bills:</strong> You have upcoming payments (
+            {upcomingRecurring.map((r) => `${r.description}: ${formatCurrency(r.amount)}`).join(', ')}
+            ).{' '}
+            <Link to="/recurring" style={{ textDecoration: 'underline', fontWeight: 600 }}>
+              View Recurring
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 4 Key Metric Cards */}
+      <div className="summary-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <SummaryCard
           title="Total Balance"
           amount={summary?.balance}
           icon={<MdAccountBalanceWallet />}
           type="balance"
+          subtitle="Net available capital"
         />
         <SummaryCard
           title="Total Income"
           amount={summary?.totalIncome}
           icon={<MdTrendingUp />}
           type="income"
+          subtitle="All-time credited"
         />
         <SummaryCard
           title="Total Expenses"
           amount={summary?.totalExpenses}
           icon={<MdTrendingDown />}
           type="expense"
+          subtitle="All-time debited"
+        />
+        <SummaryCard
+          title="Net Savings"
+          amount={summary?.savings}
+          icon={<MdSavings />}
+          type="savings"
+          subtitle="Income minus expenses"
         />
       </div>
 
-      {/* Monthly Budget & Spending Limit Feature */}
-      <BudgetWidget
-        currentMonthExpenses={
-          summary?.monthlyChartData?.find(
-            (d) => d.month === new Date().toISOString().slice(0, 7)
-          )?.expenses ?? (summary?.totalExpenses || 0)
-        }
-        onBudgetUpdated={fetchSummary}
-      />
+      {/* Monthly Comparison Widget */}
+      {comparison && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card-header">
+            <h2 className="card-title">Monthly Comparison</h2>
+            <span className="text-sm text-muted">
+              {comparison.currentMonth.name} vs {comparison.previousMonth.name}
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="comparison-grid">
+              <div className="comparison-card income-comp">
+                <div className="comparison-label">Current Month Income</div>
+                <div className="comparison-val">{formatCurrency(comparison.currentMonth.income)}</div>
+                <div className="comparison-diff">
+                  {comparison.incomeChangePercent >= 0 ? (
+                    <span className="badge badge-success">
+                      <MdArrowUpward /> +{comparison.incomeChangePercent}%
+                    </span>
+                  ) : (
+                    <span className="badge badge-danger">
+                      <MdArrowDownward /> {comparison.incomeChangePercent}%
+                    </span>
+                  )}
+                  <span className="text-muted text-xs">
+                    vs {formatCurrency(comparison.previousMonth.income)} prev
+                  </span>
+                </div>
+              </div>
 
-      {/* Charts */}
-      <div className="dashboard-grid">
+              <div className="comparison-card expense-comp">
+                <div className="comparison-label">Current Month Expenses</div>
+                <div className="comparison-val">{formatCurrency(comparison.currentMonth.expenses)}</div>
+                <div className="comparison-diff">
+                  {comparison.expenseChangePercent <= 0 ? (
+                    <span className="badge badge-success">
+                      <MdArrowDownward /> {comparison.expenseChangePercent}%
+                    </span>
+                  ) : (
+                    <span className="badge badge-danger">
+                      <MdArrowUpward /> +{comparison.expenseChangePercent}%
+                    </span>
+                  )}
+                  <span className="text-muted text-xs">
+                    vs {formatCurrency(comparison.previousMonth.expenses)} prev
+                  </span>
+                </div>
+              </div>
+
+              <div className="comparison-card net-comp">
+                <div className="comparison-label">Monthly Net Savings</div>
+                <div className="comparison-val">
+                  {formatCurrency(comparison.currentMonth.income - comparison.currentMonth.expenses)}
+                </div>
+                <div className="comparison-diff">
+                  <span className="text-muted text-xs">
+                    Retained this month ({comparison.currentMonth.income > 0
+                      ? Math.round(((comparison.currentMonth.income - comparison.currentMonth.expenses) / comparison.currentMonth.income) * 100)
+                      : 0}% rate)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Status & Savings Goals Highlights */}
+      <div className="dashboard-grid" style={{ marginBottom: 24 }}>
+        {/* Budget Status Card */}
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Expense by Category</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MdPieChart style={{ color: 'var(--primary)', fontSize: 20 }} />
+              <h2 className="card-title">Active Budget Status</h2>
+            </div>
+            <Link to="/budgets" className="btn btn-outline btn-sm">
+              Manage
+            </Link>
+          </div>
+          <div className="card-body">
+            {budgetOverview?.budgetCount === 0 ? (
+              <p className="text-muted" style={{ padding: '12px 0' }}>
+                No category budgets set for this month.{' '}
+                <Link to="/budgets" style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                  Create a monthly budget
+                </Link>
+              </p>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                  <span>
+                    Spent: <strong>{formatCurrency(budgetOverview.currentMonthExpenses)}</strong>
+                  </span>
+                  <span>
+                    Total Budget: <strong>{formatCurrency(budgetOverview.totalBudgeted)}</strong>
+                  </span>
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className={`progress-bar-fill ${
+                      budgetOverview.currentMonthExpenses > budgetOverview.totalBudgeted
+                        ? 'danger'
+                        : 'primary'
+                    }`}
+                    style={{
+                      width: `${
+                        budgetOverview.totalBudgeted > 0
+                          ? Math.min(100, Math.round((budgetOverview.currentMonthExpenses / budgetOverview.totalBudgeted) * 100))
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
+                  <span className="text-muted">
+                    {budgetOverview.budgetCount} tracked budget categories
+                  </span>
+                  {budgetOverview.exceededBudgetsCount > 0 ? (
+                    <span className="badge badge-danger">
+                      {budgetOverview.exceededBudgetsCount} Exceeded
+                    </span>
+                  ) : (
+                    <span className="badge badge-success">All on track</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Savings Goal Progress */}
+        <div className="card">
+          <div className="card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MdSavings style={{ color: 'var(--success)', fontSize: 20 }} />
+              <h2 className="card-title">Savings Goals Progress</h2>
+            </div>
+            <Link to="/goals" className="btn btn-outline btn-sm">
+              View Goals
+            </Link>
+          </div>
+          <div className="card-body">
+            {goalsOverview?.count === 0 ? (
+              <p className="text-muted" style={{ padding: '12px 0' }}>
+                No savings goals created yet.{' '}
+                <Link to="/goals" style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                  Set a savings target
+                </Link>
+              </p>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                  <span>
+                    Saved: <strong>{formatCurrency(goalsOverview.totalCurrent)}</strong>
+                  </span>
+                  <span>
+                    Target: <strong>{formatCurrency(goalsOverview.totalTarget)}</strong>
+                  </span>
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill success"
+                    style={{ width: `${goalsOverview.overallProgress}%` }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
+                  <span className="text-muted">
+                    {goalsOverview.completedCount} of {goalsOverview.count} goals completed
+                  </span>
+                  <span style={{ fontWeight: 600, color: 'var(--success-dark)' }}>
+                    {goalsOverview.overallProgress}% Achieved
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Analytics Grid: Spending Trend & Expense Distribution */}
+      <div className="dashboard-grid" style={{ marginBottom: 24 }}>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Expense Distribution</h2>
+            <span className="text-xs text-muted">Category Breakdown & % Share</span>
           </div>
           <div className="card-body">
             <CategoryPieChart data={summary?.categoryData} />
@@ -124,12 +342,23 @@ function Dashboard() {
 
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Monthly Overview</h2>
-            <span className="text-sm text-muted">Last 6 months</span>
+            <h2 className="card-title">Spending Trend</h2>
+            <span className="text-xs text-muted">Expense Trajectory Over Time</span>
           </div>
           <div className="card-body">
-            <MonthlyBarChart data={summary?.monthlyChartData} />
+            <SpendingTrendChart data={summary?.monthlyChartData} />
           </div>
+        </div>
+      </div>
+
+      {/* Monthly Inflow vs Outflow Overview */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header">
+          <h2 className="card-title">Income vs Expense History</h2>
+          <span className="text-xs text-muted">Recent Months Overview</span>
+        </div>
+        <div className="card-body">
+          <MonthlyBarChart data={summary?.monthlyChartData} />
         </div>
       </div>
 

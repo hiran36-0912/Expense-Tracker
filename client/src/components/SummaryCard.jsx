@@ -1,18 +1,21 @@
-function SummaryCard({ title, amount, icon, type }) {
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 2,
-    }).format(value || 0);
-  };
+import { useCurrency } from '../context/CurrencyContext';
 
-  const isNegative = amount < 0;
+function SummaryCard({ title, amount, icon, type, subtitle }) {
+  const { formatCurrency } = useCurrency();
+
+  const isNegative = (amount || 0) < 0;
 
   let amountClass = '';
   if (type === 'income') amountClass = 'income';
   else if (type === 'expense') amountClass = 'expense';
+  else if (type === 'savings') amountClass = isNegative ? 'negative' : 'income';
   else if (isNegative) amountClass = 'negative';
+
+  let defaultSub = '';
+  if (type === 'balance') defaultSub = 'Available balance';
+  else if (type === 'income') defaultSub = 'Total income';
+  else if (type === 'expense') defaultSub = 'Total expenses';
+  else if (type === 'savings') defaultSub = isNegative ? 'Deficit' : 'Net retained';
 
   return (
     <div className="summary-card">
@@ -24,9 +27,7 @@ function SummaryCard({ title, amount, icon, type }) {
         {formatCurrency(amount)}
       </div>
       <div className="summary-card-sub">
-        {type === 'balance' && 'Current balance'}
-        {type === 'income' && 'Total income'}
-        {type === 'expense' && 'Total expenses'}
+        {subtitle || defaultSub}
       </div>
     </div>
   );
